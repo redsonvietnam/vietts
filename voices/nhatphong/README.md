@@ -143,8 +143,9 @@ python voices/nhatphong/smoke_test.py --output custom_output.wav
 - **Clone quality ceiling: 4/5** — model-bounded metallic mid-range artifact.
 - **Synthetic reference** — ElevenLabs-generated, not a real human voice.
 - **No LoRA fine-tuning** — this profile uses raw voice cloning only.
-- **Machine-specific paths** — the profile uses relative paths; adjust
-  `clone/` location if your project structure differs.
+- **Reference audio required** — the profile uses relative paths; the reference
+  audio file (`nhatphong_elevenlab1.mp3`) must be placed at `clone/` relative
+  to the repository root. It is not committed to version control.
 
 ## Version History
 
