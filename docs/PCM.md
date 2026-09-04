@@ -72,48 +72,97 @@ Operational meaning:
 - **Context ≠ Canonical State:** conversation memory or session context is not authoritative project state.
 - **Protocol ≠ Tooling:** PCM defines coordination rules independently of GitHub, Git, or any other tool.
 
-## Executor model
+## Role and execution model
 
-### R1
+PCM roles are defined by **responsibility and execution topology**, not by model intelligence.
 
-Architecture, authority, review, and Gate role.
+### AUTHORITY
 
-R1 may:
+An actor whose approval can cause a proposed state to become canonical.
 
-- define or change constraints;
-- resolve cross-workstream decisions;
-- review implementation;
-- approve or reject the Gate.
+Typical examples:
 
-### CC
+```text
+R1
+Human
+```
 
-**Reasoning-heavy executor.** Use CC when implementation must maintain multiple non-local invariants simultaneously across a change.
+Responsibilities include architecture decisions, cross-workstream decisions, contract/constraint decisions, review, Gate approval, and final override.
 
-CC may inspect code, design implementation within the approved boundary, modify code, run tests, commit, and open a proposed change. CC does not self-approve its own result.
+### PROPOSER
 
-### C1 / C2
+An actor that can reason about and produce a proposed state transition, but does not have authority to approve its own output.
 
-**Execution-heavy executors.** Use for bounded, local, mechanically verifiable, high-volume, or test-driven work. C1/C2 also do not self-approve their own changes.
+Typical example:
 
-### Human
+```text
+CC
+```
 
-Ultimate authority and override.
+CC may inspect the repository, reason about implementation, modify code, run tests/commands, commit, push, and propose a change. CC is not defined as a lower-intelligence role than R1; R1 and CC may use the same underlying model and have comparable reasoning capability. Their distinction is primarily authority, scope, context, and responsibility.
 
-## Routing guideline
+### OPERATOR
 
-Do not use a scoring system.
+An actor with a persistent execution environment that is well suited to environment-heavy or long-running work.
 
-**Question 1 — non-local invariants:** Does implementation require simultaneously preserving multiple non-local invariants throughout the diff?
+Typical examples:
 
-- No → use an execution-heavy executor.
-- Yes → use a reasoning-heavy executor (CC).
+```text
+C1
+C2
+```
 
-**Question 2 — external architecture knowledge:** Does correct execution require knowledge or an architecture decision outside the current WORKSTREAM?
+Typical strengths include local filesystem and terminal access, local services, persistent environment state, long-running tasks, repeated run → observe → modify loops, and build/runtime/benchmark work. Operator is not a lower-intelligence role; an Operator may use a very strong reasoning model.
 
-- Yes → involve R1.
-- No → remain within the current execution boundary.
+### OBSERVER
 
-A task that is not sufficiently specified should go to R1 before implementation.
+An actor that observes or verifies state without owning the implementation.
+
+Typical examples:
+
+```text
+CI
+automated checks
+benchmark runners
+static analysis
+```
+
+An Observer produces information or evidence for the applicable workflow. It does not gain merge or Gate authority merely because a check succeeds.
+
+### Contextual role assignment
+
+An actor's role is contextual, not necessarily a permanent identity. The same underlying model may act as a PROPOSER, OPERATOR, or OBSERVER depending on the tools, permissions, and execution environment assigned to the TASK.
+
+The current common mappings of CC to PROPOSER and C1/C2 to OPERATOR are practical defaults, not universal PCM rules.
+
+## Executor selection
+
+**Prefer the shortest capable execution path.**
+
+Use the executor that can complete the TASK with the fewest unnecessary handoffs while still satisfying the required reasoning, environment, verification, and authority constraints.
+
+Examples:
+
+```text
+Reasoning-heavy repository code change
+→ CC may be the shortest capable path.
+
+Local runtime/debugging issue
+→ C1/C2 may be the shortest capable path.
+
+Long-running terminal/build/benchmark operation
+→ C1/C2 may be the shortest capable path.
+
+Architecture or authority decision
+→ R1.
+
+Cross-workstream decision
+→ R1.
+```
+
+Executor selection is based primarily on TASK topology, not on the question "Which AI is smarter?" Useful characteristics include reasoning/invariant complexity, environment dependence, feedback-loop persistence, execution duration, context scope, and authority requirement. These characteristics are not a scoring formula.
+
+If correct execution requires knowledge or an architecture decision outside the current WORKSTREAM, involve R1. A task that is not sufficiently specified should go to R1 before implementation.
 
 ## WORKSTREAM decomposition
 
@@ -122,6 +171,38 @@ Workstream decomposition matters more than maximizing the number of agents.
 Prefer workstreams whose relevant contract/constraint surfaces are as disjoint as practical. Parallel execution is appropriate when affected surfaces are disjoint or explicitly coordinated.
 
 PCM does not require a complex locking system.
+
+## Multi-agent principle
+
+Adding another capable executor is not automatically beneficial. Before introducing another execution hop, ask:
+
+```text
+Does this executor provide a capability that the previous executor lacks?
+```
+
+If not, the additional handoff is probably unnecessary.
+
+Prefer:
+
+```text
+R1 → CC → GATE
+```
+
+over:
+
+```text
+R1 → CC → C1 → GATE
+```
+
+when C1 adds no required capability. Prefer:
+
+```text
+R1 → C1 → GATE
+```
+
+when the TASK genuinely depends on C1's persistent/local execution environment.
+
+PCM does not require separate permanent roles such as security reviewer, performance reviewer, test agent, integrator, or release agent. A specialized role should exist only when it owns a genuinely distinct responsibility or authority boundary. Specialized verification can normally remain a TASK/executor assignment.
 
 ## State model
 
@@ -171,9 +252,21 @@ A minimum Gate checks:
 5. Authorized reviewer approves
 ```
 
-An executor must not approve its own implementation.
+```text
+Executor
+    ≠
+Approver
+```
 
-Independent verification is risk-dependent, not universally mandatory. Changes involving important contracts, high-risk boundaries, or high blast radius should receive stronger independent verification.
+```text
+Implementation success
+    ≠
+Acceptance
+```
+
+An executor must not approve its own implementation. This is a PCM rule; the repository should not be assumed to machine-enforce identity separation unless such enforcement is explicitly configured.
+
+Independent verification is risk-dependent, not universally mandatory. Different identity or session alone does not guarantee meaningful independent verification. Strong verification may instead require a different method, evidence source, or failure model. Changes involving important contracts, high-risk boundaries, or high blast radius should receive stronger independent verification.
 
 ## Contract / constraint versioning
 
@@ -202,8 +295,9 @@ Branches and worktrees are implementation mechanisms. A branch is not an agent i
 ## How PCM is currently used in this repository
 
 - **R1** coordinates architecture and Gates.
-- **CC** handles reasoning-heavy implementation when appropriate.
-- **C1/C2** handle execution-heavy work.
+- **CC** commonly acts as a PROPOSER for reasoning-heavy implementation when appropriate.
+- **C1/C2** commonly act as OPERATORS for execution-heavy work when their environment is the shortest capable path.
+- Any of these actors may take another contextual role when the TASK, tools, permissions, and environment require it.
 - **GitHub** provides persistent repository state.
 - **HANDOFF** keeps work transferable across sessions.
 - Proposed changes become canonical only after the applicable Gate.
