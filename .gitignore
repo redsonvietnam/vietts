@@ -19,3 +19,9 @@ finetune/output/
 
 # Merged Models
 merged_models_cache/
+
+# Voice clone reference audio (do not commit binaries)
+clone/
+
+# Smoke test output
+voices/*/smoke_test_output.wav

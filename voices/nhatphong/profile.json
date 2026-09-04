@@ -1,0 +1,46 @@
+{
+  "profile_name": "nhatphong",
+  "version": "1.0.0",
+  "status": "experimental",
+  "description": "Nhật Phong voice profile — experimental clone for Solar System prototype",
+
+  "reference": {
+    "filename": "nhatphong_elevenlab1.mp3",
+    "relative_path": "clone/nhatphong_elevenlab1.mp3",
+    "classification": "SYNTHETIC",
+    "source": "ElevenLabs-generated",
+    "duration_seconds": 166,
+    "notes": "NOT a real human recording. Generated via ElevenLabs. Non-ground-truth for voice quality benchmarking."
+  },
+
+  "inference": {
+    "denoise": true,
+    "use_ref_codes": true,
+    "temperature": 0.5,
+    "repetition_penalty": 1.2,
+    "max_chars": 128
+  },
+
+  "runtime": {
+    "vieneu_version": ">=3.4.0",
+    "backend": "v3turbo",
+    "model": "pnnbao-ump/VieNeu-TTS-v3-Turbo",
+    "precision": "int8",
+    "device": "cpu",
+    "sample_rate": 48000
+  },
+
+  "metadata": {
+    "created": "2026-09-04",
+    "author": "PCM1 pipeline",
+    "use_case": "Solar System video prototype narration",
+    "production_voice": "Thái Sơn (NOT this profile)",
+    "notes": [
+      "This profile is experimental only.",
+      "Production voice remains Thái Sơn (preset).",
+      "Clone quality ceiling is 4/5 — model-bounded metallic artifact.",
+      "Reference audio must be placed at the relative_path location.",
+      "Do NOT commit the reference binary to this repository."
+    ]
+  }
+}
