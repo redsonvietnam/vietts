@@ -6,6 +6,7 @@ from vieneu_utils.core_utils import (
     split_into_sentences,
     pack_sentences_into_chunks,
     join_audio_chunks,
+    gaps_to_silence,
 )
 
 # --- Text Utils Tests ---
@@ -290,3 +291,20 @@ def test_max_expected_frames_single_word_hard_cap():
 def test_max_expected_frames_ignores_markup():
     assert max_expected_frames("<en>abc def</en>") == max_expected_frames("abc def")
     assert max_expected_frames("<en>ab cd</en> ef") == max_expected_frames("ab cd ef")
+
+
+# --- gaps_to_silence Tests ---
+
+def test_gaps_to_silence():
+    # Known gap types
+    assert gaps_to_silence(["para"]) == [0.35]
+    assert gaps_to_silence(["sentence"]) == [0.18]
+    assert gaps_to_silence(["minor"]) == [0.04]
+    # Unknown gap type defaults to sentence (0.18)
+    assert gaps_to_silence(["unknown"]) == [0.18]
+    # Multiple gaps
+    assert gaps_to_silence(["para", "sentence", "minor"]) == [0.35, 0.18, 0.04]
+    # Empty list
+    assert gaps_to_silence([]) == []
+    # Mixed known and unknown
+    assert gaps_to_silence(["para", "xyz", "minor"]) == [0.35, 0.18, 0.04]
