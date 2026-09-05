@@ -567,6 +567,16 @@ def get_silence_duration_v2(chunk: PhoneChunk) -> float:
 # ─── Misc ────────────────────────────────────────────────────────────────────
 
 def env_bool(name: str, default: bool = False) -> bool:
+    """Đọc giá trị boolean từ biến môi trường.
+
+    Args:
+        name: Tên biến môi trường cần đọc.
+        default: Giá trị mặc định trả về nếu biến không tồn tại. Mặc định: False.
+
+    Returns:
+        True nếu giá trị biến là '1', 'true', 'yes', 'y', hoặc 'on' (không phân biệt
+        hoa thường). False nếu biến không tồn tại hoặc giá trị không khớp.
+    """
     v = os.getenv(name)
     if v is None:
         return default
