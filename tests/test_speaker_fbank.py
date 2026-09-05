@@ -66,3 +66,11 @@ print(json.dumps({"shape": list(feats.shape), "torch_loaded": "torch" in sys.mod
         out = json.loads(proc.stdout.strip().splitlines()[-1])
         assert out["shape"] == [98, 80]
         assert out["torch_loaded"] is False
+
+    def test_fbank_resampling_different_sample_rates(self):
+        from vieneu._v3_turbo_engine.speaker import extract_speaker_fbank
+
+        sample_rates = [16000, 22050, 24000, 44100]
+        for sr in sample_rates:
+            feats = extract_speaker_fbank(_sine(sr), sample_rate=sr)
+            assert feats.shape == (98, 80), f"Failed for sample_rate={sr}"
