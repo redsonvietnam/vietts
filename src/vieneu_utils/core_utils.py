@@ -123,11 +123,14 @@ def join_audio_chunks(
     if not chunks:
         return np.array([], dtype=np.float32)
     if len(chunks) == 1:
-        return chunks[0].copy()
+        return chunks[0]
 
     silence_samples   = int(sr * silence_p)
     crossfade_samples = int(sr * crossfade_p)
     use_silence_ps = silence_ps is not None
+
+    # Determine output dtype via NumPy promotion rules (matches np.concatenate behavior).
+    out_dtype = np.result_type(*chunks)
 
     # Pre-calculate total output size to avoid repeated np.concatenate.
     total = len(chunks[0])
@@ -143,16 +146,15 @@ def join_audio_chunks(
         else:
             total += len(chunks[i])
 
-    out = np.zeros(total, dtype=np.float32)
+    out = np.zeros(total, dtype=out_dtype)
     pos = 0
 
     # Copy first chunk
-    c0 = np.asarray(chunks[0], dtype=np.float32)
-    out[: len(c0)] = c0
-    pos += len(c0)
+    out[: len(chunks[0])] = chunks[0]
+    pos += len(chunks[0])
 
     for i in range(1, len(chunks)):
-        nxt = np.asarray(chunks[i], dtype=np.float32)
+        nxt = chunks[i]
         if use_silence_ps:
             gap = max(0, int(sr * silence_ps[i - 1])) if i - 1 < len(silence_ps) else 0
             if gap > 0:
@@ -166,8 +168,8 @@ def join_audio_chunks(
         elif crossfade_samples > 0:
             overlap = min(pos, len(nxt), crossfade_samples)
             if overlap > 0:
-                fade_out = np.linspace(1.0, 0.0, overlap, dtype=np.float32)
-                fade_in  = np.linspace(0.0, 1.0, overlap, dtype=np.float32)
+                fade_out = np.linspace(1.0, 0.0, overlap, dtype=out_dtype)
+                fade_in  = np.linspace(0.0, 1.0, overlap, dtype=out_dtype)
                 out[pos - overlap : pos] = (
                     out[pos - overlap : pos] * fade_out + nxt[:overlap] * fade_in
                 )
