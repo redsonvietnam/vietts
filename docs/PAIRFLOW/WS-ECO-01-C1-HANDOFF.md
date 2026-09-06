@@ -1,4 +1,4 @@
-# WS-ECO-01-C1 HANDOFF
+# WS-ECO-01-C1 HANDOFF (Corrected)
 
 ## WORK STATE
 
@@ -20,14 +20,31 @@ PCM v1 (docs/PCM.md). Remotion Production Contract v1 (contract.json).
 
 | Repository | Branch | Commit | Status |
 |------------|--------|--------|--------|
-| vietts | `relay/PAIRFLOW-WS-ECO-01-C1` | `78bbc17` | Clean |
+| vietts | `relay/PAIRFLOW-WS-ECO-01-C1-clean` | `a122d68` | Scope-clean |
 | remotion-html | `relay/PAIRFLOW-WS-ECO-01-C1` | `cfe0f1d` | Uncommitted template changes preserved |
 | zeroclaw-remotion | `relay/PAIRFLOW-WS-ECO-01-C1` | `caedf9f` | Clean |
 
+### vietts — Scope Verification
+
+The clean relay branch `relay/PAIRFLOW-WS-ECO-01-C1-clean` at `a122d68` contains ONLY:
+
+```text
+docs/PAIRFLOW/Bridge.md
+docs/PAIRFLOW/WS-ECO-01-C1-HANDOFF.md
+```
+
+The following files are **NOT** part of the WS-ECO-01 proposed state:
+- `src/vieneu_utils/core_utils.py` — unrelated VieNeu optimization work
+- `tests/test_speaker_fbank.py` — unrelated VieNeu test work
+- `tests/test_utils.py` — unrelated VieNeu test work
+
+These files exist on the contaminated `relay/PAIRFLOW-WS-ECO-01-C1` branch (created from `pcm/pcm2-opencode-pcm-skill-01` which already contained VieNeu work). The clean branch was rebuilt from baseline `4286e61` (pre-VieNeu).
+
 ### Files Changed
 
-**vietts** (1 file):
+**vietts** (2 files):
 - `docs/PAIRFLOW/Bridge.md` — NEW: PCM ↔ PAIRFLOW semantic mapping bridge
+- `docs/PAIRFLOW/WS-ECO-01-C1-HANDOFF.md` — NEW: This handoff document
 
 **remotion-html** (3 files):
 - `HANDOFF.md` — Reconciled with current state (NghiQuyet57Video, not V2; scenes in templates/nq57/scenes/)
@@ -44,8 +61,18 @@ PCM v1 (docs/PCM.md). Remotion Production Contract v1 (contract.json).
 - `npx tsc --noEmit`: passed
 - `npm run verify`: 948 tests passed; nq57 audio duration issues are pre-existing (not caused by this work)
 
-**zeroclaw-remotion**:
-- `npm test`: 6/33 tests passed (pre-existing failures — adapter expects remotion-html contract.json path configuration)
+**zeroclaw-remotion — Baseline vs Relay Comparison**:
+
+| Metric | Baseline `836d5c0` | Relay `caedf9f` | Identical? |
+|--------|-------------------|-----------------|------------|
+| Total tests | 33 | 33 | YES |
+| Passed | 6 | 6 | YES |
+| Failed | 27 | 27 | YES |
+| Failure signatures | 27 unique | 27 unique | YES |
+
+**Confirmed**: All 27 test failures are pre-existing at baseline `836d5c0` (WS-ZC-08D). The documentation-only change on the relay branch does not introduce or alter any test failures.
+
+**Failure root cause**: The adapter tests expect `contract.json` to be discoverable from the remotion-html repository path. This is a path configuration issue, not a code defect introduced by WS-ECO-01.
 
 ### Bridge Document
 
@@ -71,15 +98,18 @@ Both files serve distinct purposes. `contract.json` is the canonical source for 
 ## OPEN RISK
 
 1. **nq57 audio duration mismatch**: Pre-existing issue where audio durations exceed scene durations. Not caused by this work.
-2. **zeroclaw-remotion test failures**: Pre-existing — adapter tests expect contract.json path configuration pointing to remotion-html.
+2. **zeroclaw-remotion test failures**: Confirmed pre-existing at baseline `836d5c0`. Adapter tests expect contract.json path configuration pointing to remotion-html.
 3. **remotion-html uncommitted changes**: Template changes (editorial-feature, product-teaser, real-estate-listing) were present before this work and preserved untouched.
+4. **Contaminated relay branch**: `relay/PAIRFLOW-WS-ECO-01-C1` contains VieNeu work outside scope. Use `relay/PAIRFLOW-WS-ECO-01-C1-clean` for merge.
 
 ## NEXT ACTION
 
 R1 Gate review. If PASS:
-- Merge relay branches into respective base branches
-- Consider creating PRs for each relay branch
+- Merge `relay/PAIRFLOW-WS-ECO-01-C1-clean` for vietts (not the contaminated branch)
+- Merge `relay/PAIRFLOW-WS-ECO-01-C1` for remotion-html
+- Merge `relay/PAIRFLOW-WS-ECO-01-C1` for zeroclaw-remotion
+- Delete contaminated `relay/PAIRFLOW-WS-ECO-01-C1` branch for vietts
 
 ## PROPOSED STATE
 
-Ecosystem foundation cleaned up. PCM ↔ PAIRFLOW relationship explicitly documented. Stale documentation corrected. Production manifest sources clarified. Remotion Contract v1 behavior unchanged.
+Ecosystem foundation cleaned up. PCM ↔ PAIRFLOW relationship explicitly documented. Stale documentation corrected. Production manifest sources clarified. Remotion Contract v1 behavior unchanged. Scope-clean relay ready for merge.
