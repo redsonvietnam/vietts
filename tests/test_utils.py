@@ -201,6 +201,30 @@ def test_join_audio_chunks_single():
     chunk = np.ones(100)
     assert np.array_equal(join_audio_chunks([chunk], 16000), chunk)
 
+def test_join_audio_chunks_silence_ps():
+    sr = 16000
+    chunk_a = np.ones(100, dtype=np.float32)
+    chunk_b = np.ones(100, dtype=np.float32)
+    chunk_c = np.ones(100, dtype=np.float32)
+
+    # 1. silence_ps applies correct per-gap duration
+    #    3 chunks -> 2 gaps: [0.01s, 0.02s] -> [160, 320] samples
+    joined = join_audio_chunks([chunk_a, chunk_b, chunk_c], sr=sr, silence_ps=[0.01, 0.02])
+    assert joined.shape == (100 + 160 + 100 + 320 + 100,)  # 780
+
+    # 2. silence_ps takes precedence over silence_p
+    joined_ps = join_audio_chunks([chunk_a, chunk_b], sr=sr, silence_p=0.1, silence_ps=[0.01])
+    assert joined_ps.shape == (100 + 160 + 100,)  # 360, NOT 100+1600+100
+
+    # 3. silence_ps shorter than gaps -> missing gaps default to 0
+    #    3 chunks -> 2 gaps: [0.01s] only -> gap[1] = 0
+    joined_short = join_audio_chunks([chunk_a, chunk_b, chunk_c], sr=sr, silence_ps=[0.01])
+    assert joined_short.shape == (100 + 160 + 100 + 0 + 100,)  # 460
+
+    # 4. silence_ps with zero values -> no silence inserted
+    joined_zero = join_audio_chunks([chunk_a, chunk_b], sr=sr, silence_ps=[0.0])
+    assert joined_zero.shape == (200,)  # no silence
+
 def test_extract_speech_ids():
     codes_str = "<|speech_100|><|speech_101|><|speech_102|>"
     assert extract_speech_ids(codes_str) == [100, 101, 102]
