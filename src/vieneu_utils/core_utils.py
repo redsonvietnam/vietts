@@ -123,37 +123,64 @@ def join_audio_chunks(
     if not chunks:
         return np.array([], dtype=np.float32)
     if len(chunks) == 1:
-        return chunks[0]
+        return chunks[0].copy()
 
     silence_samples   = int(sr * silence_p)
     crossfade_samples = int(sr * crossfade_p)
-    final_wav = chunks[0]
+    use_silence_ps = silence_ps is not None
+
+    # Pre-calculate total output size to avoid repeated np.concatenate.
+    total = len(chunks[0])
+    for i in range(1, len(chunks)):
+        if use_silence_ps:
+            gap = max(0, int(sr * silence_ps[i - 1])) if i - 1 < len(silence_ps) else 0
+            total += gap + len(chunks[i])
+        elif silence_samples > 0:
+            total += silence_samples + len(chunks[i])
+        elif crossfade_samples > 0:
+            overlap = min(total, len(chunks[i]), crossfade_samples)
+            total += len(chunks[i]) - overlap
+        else:
+            total += len(chunks[i])
+
+    out = np.zeros(total, dtype=np.float32)
+    pos = 0
+
+    # Copy first chunk
+    c0 = np.asarray(chunks[0], dtype=np.float32)
+    out[: len(c0)] = c0
+    pos += len(c0)
 
     for i in range(1, len(chunks)):
-        next_chunk = chunks[i]
-        if silence_ps is not None:
-            gap_samples = int(sr * silence_ps[i - 1]) if i - 1 < len(silence_ps) else 0
-            if gap_samples > 0:
-                silence   = np.zeros(gap_samples, dtype=np.float32)
-                final_wav = np.concatenate([final_wav, silence, next_chunk])
-            else:
-                final_wav = np.concatenate([final_wav, next_chunk])
+        nxt = np.asarray(chunks[i], dtype=np.float32)
+        if use_silence_ps:
+            gap = max(0, int(sr * silence_ps[i - 1])) if i - 1 < len(silence_ps) else 0
+            if gap > 0:
+                pos += gap  # zeros from pre-allocated buffer
+            out[pos : pos + len(nxt)] = nxt
+            pos += len(nxt)
         elif silence_samples > 0:
-            silence   = np.zeros(silence_samples, dtype=np.float32)
-            final_wav = np.concatenate([final_wav, silence, next_chunk])
+            pos += silence_samples  # zeros from pre-allocated buffer
+            out[pos : pos + len(nxt)] = nxt
+            pos += len(nxt)
         elif crossfade_samples > 0:
-            overlap = min(len(final_wav), len(next_chunk), crossfade_samples)
+            overlap = min(pos, len(nxt), crossfade_samples)
             if overlap > 0:
-                fade_out  = np.linspace(1.0, 0.0, overlap, dtype=np.float32)
-                fade_in   = np.linspace(0.0, 1.0, overlap, dtype=np.float32)
-                blended   = final_wav[-overlap:] * fade_out + next_chunk[:overlap] * fade_in
-                final_wav = np.concatenate([final_wav[:-overlap], blended, next_chunk[overlap:]])
+                fade_out = np.linspace(1.0, 0.0, overlap, dtype=np.float32)
+                fade_in  = np.linspace(0.0, 1.0, overlap, dtype=np.float32)
+                out[pos - overlap : pos] = (
+                    out[pos - overlap : pos] * fade_out + nxt[:overlap] * fade_in
+                )
+                pos += len(nxt) - overlap
+                out[pos - (len(nxt) - overlap) : pos] = nxt[overlap:]
             else:
-                final_wav = np.concatenate([final_wav, next_chunk])
+                out[pos : pos + len(nxt)] = nxt
+                pos += len(nxt)
         else:
-            final_wav = np.concatenate([final_wav, next_chunk])
+            out[pos : pos + len(nxt)] = nxt
+            pos += len(nxt)
 
-    return final_wav
+    return out
 
 # ─── v1: split raw text ──────────────────────────────────────────────────────
 
